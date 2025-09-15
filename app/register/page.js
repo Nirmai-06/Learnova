@@ -45,7 +45,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-100 to-slate-700">
       {/* Navbar */}
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-12">

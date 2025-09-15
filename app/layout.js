@@ -25,9 +25,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`font-sans ${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`font-sans ${geistSans.variable} ${geistMono.variable} antialiased bg-slate-900`}
       >
         <Suspense fallback={null}>{children}</Suspense>
       </body>
