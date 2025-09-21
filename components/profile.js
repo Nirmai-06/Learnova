@@ -27,7 +27,7 @@ import {
   TrendingUp,
   User2,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 
 export default function ProfilePage() {

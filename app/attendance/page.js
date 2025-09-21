@@ -3,7 +3,7 @@
 import { Navbar } from "@/components/Navbar";
 import FaceRecognizer from "@/components/FaceRecognizer";
 import useLabels from "@/components/useLabels";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 

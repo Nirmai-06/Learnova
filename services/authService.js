@@ -1,0 +1,194 @@
+import { auth, db } from "@/lib/firebaseConfig";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { createUserProfile, getErrorMessage } from "@/utils/authUtils";
+import { ROLE_CONFIG } from "@/constants/userRoles";
+
+export const loginWithEmail = async (email, password, selectedRole) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+    const user = userCredential.user;
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return { success: false, needsVerification: true };
+    }
+
+    // Get user profile to check role
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+
+      // Check if role matches selected role
+      if (userData.role !== selectedRole) {
+        await auth.signOut();
+        return {
+          success: false,
+          error: `This account is registered as ${
+            ROLE_CONFIG[userData.role]?.title || "Unknown"
+          }. Please select the correct role.`,
+        };
+      }
+
+      // Update last login
+      await setDoc(doc(db, "users", user.uid), {
+        ...userData,
+        lastLogin: new Date(),
+      });
+
+      return { success: true, userData };
+    } else {
+      return { success: false, needsProfile: true };
+    }
+  } catch (err) {
+    console.error("Login error:", err);
+    return {
+      success: false,
+      error:
+        getErrorMessage(err.code) ||
+        err.message
+          .replace("Firebase: ", "")
+          .replace(/\([^)]*\)/g, "")
+          .trim(),
+    };
+  }
+};
+
+export const signupWithEmail = async (
+  email,
+  password,
+  selectedRole,
+  additionalData
+) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+    const user = userCredential.user;
+
+    // Create user profile with role
+    await createUserProfile(user, selectedRole, additionalData);
+
+    // Send verification email to new users
+    await sendEmailVerification(user);
+
+    return { success: true, needsVerification: true };
+  } catch (err) {
+    console.error("Signup error:", err);
+    return {
+      success: false,
+      error:
+        getErrorMessage(err.code) ||
+        err.message
+          .replace("Firebase: ", "")
+          .replace(/\([^)]*\)/g, "")
+          .trim(),
+    };
+  }
+};
+
+export const loginWithGoogle = async (
+  selectedRole,
+  isLogin,
+  additionalData = {}
+) => {
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    // Check if user profile exists
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+
+    if (!userDoc.exists()) {
+      if (isLogin) {
+        // New Google user trying to login - need to sign up first
+        await auth.signOut();
+        return {
+          success: false,
+          error: "Account not found. Please sign up first.",
+        };
+      } else {
+        // New Google user signing up - create profile with selected role
+        const nameToUse = user.displayName || additionalData.fullName?.trim();
+        if (!nameToUse) {
+          await auth.signOut();
+          return {
+            success: false,
+            error: "Please enter your full name",
+          };
+        }
+
+        await createUserProfile(user, selectedRole, {
+          ...additionalData,
+          fullName: nameToUse,
+        });
+
+        // Email is already verified with Google
+        return { success: true, userData: { role: selectedRole } };
+      }
+    }
+
+    const userData = userDoc.data();
+
+    // For existing users, check if role matches selected role (for login)
+    if (isLogin && userData && userData.role !== selectedRole) {
+      await auth.signOut();
+      return {
+        success: false,
+        error: `This account is registered as ${
+          ROLE_CONFIG[userData.role]?.title || "Unknown"
+        }. Please select the correct role.`,
+      };
+    }
+
+    // Update last login for existing users
+    if (userData) {
+      await setDoc(doc(db, "users", user.uid), {
+        ...userData,
+        lastLogin: new Date(),
+      });
+    }
+
+    return { success: true, userData: userData || { role: selectedRole } };
+  } catch (err) {
+    console.error("Google auth error:", err);
+    return {
+      success: false,
+      error:
+        getErrorMessage(err.code) ||
+        err.message
+          .replace("Firebase: ", "")
+          .replace(/\([^)]*\)/g, "")
+          .trim(),
+    };
+  }
+};
+
+export const resetPassword = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (err) {
+    console.error("Password reset error:", err);
+    return {
+      success: false,
+      error:
+        getErrorMessage(err.code) ||
+        "Failed to send reset email. Please try again.",
+    };
+  }
+};

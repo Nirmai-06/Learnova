@@ -14,13 +14,13 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, userProfile, signOut, isAuthenticated } = useAuthContext();
   const dropdownRef = useRef(null);
 
   // Handle scroll effect
@@ -48,8 +48,8 @@ export function Navbar() {
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
   };
@@ -65,8 +65,9 @@ export function Navbar() {
       .slice(0, 2);
   };
 
-  // Get user display name safely
+  // Get user display name safely - prioritize userProfile over user
   const getUserDisplayName = () => {
+    if (userProfile?.fullName) return userProfile.fullName;
     if (user?.displayName) return user.displayName;
     if (user?.email) return user.email.split("@")[0];
     return "User";
@@ -74,8 +75,33 @@ export function Navbar() {
 
   // Get user profile image safely
   const getUserPhoto = () => {
-    // console.log(user.photoURL);
     return user?.photoURL || null;
+  };
+
+  // Get user role for display
+  const getUserRole = () => {
+    if (!userProfile?.role) return "User";
+
+    // Capitalize first letter
+    return userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1);
+  };
+
+  // Get dashboard link based on user role
+  const getDashboardLink = () => {
+    if (!userProfile?.role) return "/profile";
+
+    switch (userProfile.role) {
+      case "student":
+        return "/student/dashboard";
+      case "teacher":
+        return "/teacher/dashboard";
+      case "institute":
+        return "/institute/dashboard";
+      case "admin":
+        return "/admin/dashboard";
+      default:
+        return "/profile";
+    }
   };
 
   return (
@@ -139,7 +165,7 @@ export function Navbar() {
               ))}
 
               {/* Enhanced Auth Section */}
-              {user ? (
+              {isAuthenticated ? (
                 <div className="flex items-center space-x-4 ml-6">
                   <Link href="/attendance">
                     <Button className="relative bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-600 text-white font-medium shadow-lg hover:shadow-2xl hover:shadow-accent/30 transition-all duration-300 hover:scale-105 group overflow-hidden">
@@ -194,7 +220,7 @@ export function Navbar() {
                         <p className="text-sm font-medium">
                           {getUserDisplayName()}
                         </p>
-                        <p className="text-xs text-white/60">Premium User</p>
+                        <p className="text-xs text-white/60">{getUserRole()}</p>
                       </div>
                       <ChevronDown
                         className={`h-4 w-4 transition-transform duration-300 ${
@@ -233,7 +259,7 @@ export function Navbar() {
                               <div className="flex items-center mt-1">
                                 <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1" />
                                 <span className="text-xs text-yellow-400 font-medium">
-                                  Premium
+                                  {getUserRole()}
                                 </span>
                               </div>
                             </div>
@@ -242,31 +268,47 @@ export function Navbar() {
 
                         <div className="relative py-2">
                           {[
-                            { href: "/profile", icon: User, label: "Profile" },
                             {
-                              href: "/dashboard",
+                              href: "/profile",
+                              icon: User,
+                              label: "Profile",
+                              key: "profile",
+                            },
+                            {
+                              href: getDashboardLink(),
                               icon: Activity,
-                              label: "Activity Dashboard",
+                              label: "Dashboard",
+                              key: "dashboard",
                             },
                             {
                               href: "/settings",
                               icon: Settings,
                               label: "Settings",
+                              key: "settings",
                             },
-                          ].map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className="flex items-center px-4 py-3 text-sm text-white/80 hover:text-white hover:bg-gradient-to-r hover:from-accent/10 hover:to-blue-500/10 transition-all duration-200 group"
-                              onClick={() => setIsDropdownOpen(false)}
-                            >
-                              <item.icon className="h-4 w-4 mr-3 group-hover:text-accent transition-colors duration-200" />
-                              {item.label}
-                              <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <ChevronDown className="h-3 w-3 -rotate-90" />
-                              </div>
-                            </Link>
-                          ))}
+                          ]
+                            .filter(
+                              (item, index, arr) =>
+                                // Remove dashboard if it points to profile to avoid duplicates
+                                !(
+                                  item.key === "dashboard" &&
+                                  item.href === "/profile"
+                                )
+                            )
+                            .map((item) => (
+                              <Link
+                                key={item.key}
+                                href={item.href}
+                                className="flex items-center px-4 py-3 text-sm text-white/80 hover:text-white hover:bg-gradient-to-r hover:from-accent/10 hover:to-blue-500/10 transition-all duration-200 group"
+                                onClick={() => setIsDropdownOpen(false)}
+                              >
+                                <item.icon className="h-4 w-4 mr-3 group-hover:text-accent transition-colors duration-200" />
+                                {item.label}
+                                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <ChevronDown className="h-3 w-3 -rotate-90" />
+                                </div>
+                              </Link>
+                            ))}
 
                           <hr className="my-2 border-white/10" />
 
@@ -302,7 +344,7 @@ export function Navbar() {
 
             {/* Enhanced Mobile menu button with User Logo */}
             <div className="md:hidden flex items-center space-x-3">
-              {user && (
+              {isAuthenticated && (
                 <div className="relative">
                   {getUserPhoto() ? (
                     <img
@@ -367,7 +409,7 @@ export function Navbar() {
                 ))}
 
                 <div className="px-2 py-4 space-y-3 border-t border-white/10 mt-4">
-                  {user ? (
+                  {isAuthenticated ? (
                     <>
                       {/* Enhanced User Info in Mobile */}
                       <div className="flex items-center space-x-4 py-4 px-4 bg-gradient-to-r from-white/5 to-transparent rounded-xl border border-white/10">
@@ -394,7 +436,7 @@ export function Navbar() {
                           <div className="flex items-center mt-1">
                             <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1" />
                             <span className="text-xs text-yellow-400 font-medium">
-                              Premium User
+                              {getUserRole()}
                             </span>
                           </div>
                         </div>
@@ -413,31 +455,47 @@ export function Navbar() {
                       </Link>
 
                       {[
-                        { href: "/profile", icon: User, label: "Profile" },
                         {
-                          href: "/dashboard",
+                          href: "/profile",
+                          icon: User,
+                          label: "Profile",
+                          key: "profile-mobile",
+                        },
+                        {
+                          href: getDashboardLink(),
                           icon: Activity,
-                          label: "Activity Dashboard",
+                          label: "Dashboard",
+                          key: "dashboard-mobile",
                         },
                         {
                           href: "/settings",
                           icon: Settings,
                           label: "Settings",
+                          key: "settings-mobile",
                         },
-                      ].map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setIsMenuOpen(false)}
-                          className="flex items-center px-4 py-3 text-white/80 hover:text-white hover:bg-gradient-to-r hover:from-accent/10 hover:to-blue-500/10 transition-all duration-300 rounded-xl group"
-                        >
-                          <item.icon className="h-5 w-5 mr-3 group-hover:text-accent transition-colors duration-300" />
-                          {item.label}
-                          <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <ChevronDown className="h-4 w-4 -rotate-90" />
-                          </div>
-                        </Link>
-                      ))}
+                      ]
+                        .filter(
+                          (item, index, arr) =>
+                            // Remove dashboard if it points to profile to avoid duplicates
+                            !(
+                              item.key === "dashboard-mobile" &&
+                              item.href === "/profile"
+                            )
+                        )
+                        .map((item) => (
+                          <Link
+                            key={item.key}
+                            href={item.href}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="flex items-center px-4 py-3 text-white/80 hover:text-white hover:bg-gradient-to-r hover:from-accent/10 hover:to-blue-500/10 transition-all duration-300 rounded-xl group"
+                          >
+                            <item.icon className="h-5 w-5 mr-3 group-hover:text-accent transition-colors duration-300" />
+                            {item.label}
+                            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <ChevronDown className="h-4 w-4 -rotate-90" />
+                            </div>
+                          </Link>
+                        ))}
 
                       <Button
                         className="w-full bg-gradient-to-r from-red-600/80 to-red-700/80 hover:from-red-700 hover:to-red-800 text-white font-medium shadow-lg transition-all duration-300 group"

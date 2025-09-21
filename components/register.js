@@ -6,7 +6,7 @@ import { logEvent } from "firebase/analytics";
 import React from "react";
 import { Upload, User, Mail, Hash, Sparkles, CheckCircle } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {
   useEffect(() => {
