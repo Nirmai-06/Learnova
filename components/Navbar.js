@@ -411,11 +411,11 @@ export function Navbar() {
 
           {/* Right Side Panel */}
           <div
-            className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gradient-to-br from-black/95 via-gray-900/95 to-black/95 backdrop-blur-2xl border-l border-white/20 z-52 md:hidden shadow-2xl"
+            className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gradient-to-br from-black/95 via-gray-900/95 to-black/95 backdrop-blur-2xl border-l border-white/20 z-52 md:hidden shadow-2xl flex flex-col"
             style={{ animation: "slideInRight 0.3s ease-out" }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
               <div className="flex items-center space-x-3">
                 <div className="relative bg-gradient-to-br from-accent to-blue-500 p-2 rounded-xl shadow-lg">
                   <BookOpen className="h-5 w-5 text-white" />
@@ -439,7 +439,7 @@ export function Navbar() {
 
             {/* User Info Section */}
             {isAuthenticated && (
-              <div className="p-6 border-b border-white/10">
+              <div className="p-6 border-b border-white/10 flex-shrink-0">
                 <div className="flex items-center space-x-4 mb-4">
                   {getUserPhoto() ? (
                     <Image
@@ -541,7 +541,7 @@ export function Navbar() {
             </div>
 
             {/* Bottom Section */}
-            <div className="p-6 border-t border-white/10 space-y-4">
+            <div className="p-6 border-t border-white/10 space-y-4 flex-shrink-0">
               {isAuthenticated ? (
                 <Button
                   className="w-full bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-600 hover:to-red-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 group"
