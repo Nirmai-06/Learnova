@@ -1,6 +1,8 @@
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import { USER_ROLES } from "@/constants/userRoles";
+import { initializeUserStats } from "@/services/statsService";
+
 
 /**
  * Returns a user-friendly authentication error message.
@@ -58,6 +60,10 @@ export const createUserProfile = async (user, role, additionalData = {}) => {
   }
 
   await setDoc(doc(db, "users", user.uid), userProfile);
+  
+  // Initialize their empty dashboard stats
+  await initializeUserStats(user.uid);
+
   return userProfile;
 };
 

@@ -29,6 +29,7 @@ import { Navbar } from "@/components/Navbar";
 
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/services/activityService";
+import { updateUserStat } from "@/services/statsService";
 
 // Reusable animation component
 const Reveal = ({ children, className = "", delay = 0, y = 28 }) => (
@@ -227,6 +228,9 @@ export default function ActivityPage() {
       type: activity.type || "course",
       progress: 0,
     });
+
+    // Increment "Courses Enrolled" statistic
+    await updateUserStat(user.uid, "Courses Enrolled", 1);
 
     // Here add logic to actually open the quiz/game
     alert(`Started ${activity.title}! Progress is now being tracked.`);
