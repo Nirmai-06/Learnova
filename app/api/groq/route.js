@@ -1,6 +1,7 @@
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { verifyFirebaseToken } from "@/lib/firebase-admin";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { detectInjection, sanitizeMessage, buildSecureMessages } from "@/utils/promptGuard";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_MESSAGE_LENGTH = 2000;
@@ -45,6 +46,17 @@ export async function POST(request) {
       return jsonError("Message is too long", 400);
     }
 
+    const { isInjection, matchedPattern } = detectInjection(trimmedMessage);
+    if (isInjection) {
+      console.warn(`[nova-prompt-guard] Injection attempt detected from UID: ${decodedToken.uid}, pattern: ${matchedPattern}`);
+      return jsonError("Your message contains content that violates usage policies. Please rephrase your question.", 400);
+    }
+
+    const cleanMessage = sanitizeMessage(trimmedMessage);
+    if (!cleanMessage) {
+      return jsonError("Message is required", 400);
+    }
+
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return jsonError("Groq API key is not configured", 500);
@@ -53,6 +65,8 @@ export async function POST(request) {
     const timeoutMs = parseInt(process.env.GROQ_TIMEOUT || "30000", 10) || 30000;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const messages = buildSecureMessages(cleanMessage, SYSTEM_PROMPT);
 
     let response;
     try {
@@ -65,14 +79,7 @@ export async function POST(request) {
         signal: controller.signal,
         body: JSON.stringify({
           model: "llama-3.1-8b-instant",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are Nova, the friendly AI assistant for Learnova - a Smart Student Engagement Ecosystem. You help with questions about attendance automation, smart activities, security features, analytics, and educational technology. Always be helpful, informative, and encouraging. Keep responses concise but comprehensive.",
-            },
-            { role: "user", content: trimmedMessage },
-          ],
+          messages,
           max_tokens: 400,
           temperature: 0.7,
         }),
