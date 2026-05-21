@@ -82,7 +82,7 @@ export async function recordAttendance({
     confidenceScore: confidenceScore ?? 0,
   });
 
-  await recalculateAttendanceRate(userId);
+  const newRate = await recalculateAttendanceRate(userId);
 
-  return { alreadyRecorded: false };
+  return { alreadyRecorded: false, newRate };
 }
