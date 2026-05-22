@@ -99,15 +99,14 @@ export async function PATCH(request) {
     const { userId: bodyUserId, ...settings } = parsed.data;
     
     let targetUserId = decodedToken.uid;
-    let isOperatorAdmin = false;
 
+    // Check if updating another user's settings (requires admin privilege)
     if (bodyUserId && bodyUserId !== decodedToken.uid) {
       const profile = await getUserProfile(decodedToken.uid);
       if (!profile || profile.role !== "admin") {
         return jsonError("Forbidden: You are not authorized to update another user's settings.", 403);
       }
       targetUserId = bodyUserId;
-      isOperatorAdmin = true;
     }
 
     const db = await connectDb();
