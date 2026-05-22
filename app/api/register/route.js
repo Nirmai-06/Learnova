@@ -126,7 +126,10 @@ export async function POST(req) {
 
     // 4. Prevent arbitrary registrations — must register own email
     if (decodedToken.email !== email) {
-      return jsonError("Forbidden: Cannot register face for a different user", 403);
+      return jsonError(
+        "Forbidden: Cannot register face for a different user",
+        403,
+      );
     }
 
     // Get DB
@@ -180,17 +183,29 @@ export async function POST(req) {
       email,
       image: blob.url,
     };
-    await users.insertOne(user);
+    const result = await users.insertOne(user);
 
     return jsonSuccess(
       {
         message: "User registered successfully",
-        user,
+        user: {
+          _id: result.insertedId,
+          name: user.name,
+          rollNo: user.rollNo,
+          email: user.email,
+        },
       },
       201,
     );
   } catch (error) {
-    console.error(error);
-    return jsonError(error.message || "Internal server error", 500);
+    // Suppress console logging in production
+    // Return generic error to client to prevent information disclosure
+    const statusCode = error.code === 11000 ? 409 : 500;
+    const clientMessage =
+      error.code === 11000
+        ? "This email is already registered"
+        : "Registration failed. Please try again later.";
+
+    return jsonError(clientMessage, statusCode);
   }
 }
